@@ -3,7 +3,7 @@ import { api } from "#lib/api";
 import { useSocket } from "#hooks/use-socket";
 import { Card, CardContent, CardHeader, CardTitle } from "#components/ui/card";
 import { Skeleton } from "#components/ui/skeleton";
-import { Package, ShoppingCart, DollarSign, Users } from "lucide-react";
+import { Package, ShoppingCart, DollarSign } from "lucide-react";
 
 export function AdminDashboard() {
   const [stats, setStats] = useState({ products: 0, orders: 0, revenue: 0 });

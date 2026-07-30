@@ -1,39 +1,52 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "#lib/api";
 import { Card, CardContent } from "#components/ui/card";
 import { Badge } from "#components/ui/badge";
 import { Input } from "#components/ui/input";
 import { Button } from "#components/ui/button";
 import { Skeleton } from "#components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#components/ui/select";
 import { Search, Package } from "lucide-react";
 
 export function Products() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("default");
+  const currentPage = Number(searchParams.get("page")) || 1;
+  const itemsPerPage = 6;
 
   useEffect(() => {
-    api.products.getAll()
-      .then((res) => setProducts(res.data))
-      .catch(() => {})
+    setLoading(true);
+    api.products
+      .getAll({
+        page: currentPage,
+        limit: itemsPerPage,
+        search,
+        category,
+        sort,
+      })
+      .then((res) => {
+        setProducts(res.data);
+        setTotalPages(res.totalPages);
+      })
+      .catch((err) => {
+        console.error(err);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [currentPage, search, category, sort]);
 
   const categories = ["all", ...new Set(products.map((p) => p.category))];
-
-  let filtered = products.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = category === "all" || p.category === category;
-    return matchesSearch && matchesCategory;
-  });
-
-  if (sort === "price-asc") filtered.sort((a, b) => a.price - b.price);
-  if (sort === "price-desc") filtered.sort((a, b) => b.price - a.price);
-  if (sort === "name") filtered.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
@@ -48,11 +61,20 @@ export function Products() {
           <Input
             placeholder="Search products..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setSearchParams({ page: 1 });
+            }}
             className="pl-9"
           />
         </div>
-        <Select value={category} onValueChange={setCategory}>
+        <Select
+          value={category}
+          onValueChange={(value) => {
+            setCategory(value);
+            setSearchParams({ page: 1 });
+          }}
+        >
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
@@ -64,7 +86,13 @@ export function Products() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={sort} onValueChange={setSort}>
+        <Select
+          value={sort}
+          onValueChange={(value) => {
+            setSort(value);
+            setSearchParams({ page: 1 });
+          }}
+        >
           <SelectTrigger className="w-full sm:w-48">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
@@ -90,29 +118,69 @@ export function Products() {
             </Card>
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : products.length === 0 ? (
         <div className="py-24 text-center">
           <Package className="mx-auto size-12 text-muted-foreground/40" />
           <p className="mt-4 text-muted-foreground">No products found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((product) => (
+          {products.map((product) => (
             <Link key={product._id} to={`/product/${product._id}`}>
               <Card className="group overflow-hidden transition-shadow hover:shadow-lg pt-0">
                 <div className="aspect-square bg-muted flex items-center justify-center">
                   <Package className="size-12 text-muted-foreground/40" />
                 </div>
                 <CardContent className="p-4">
-                  <Badge variant="secondary" className="mb-2 text-xs">{product.category}</Badge>
-                  <h3 className="font-semibold group-hover:text-primary transition-colors">{product.name}</h3>
-                  <p className="mt-2 text-lg font-bold">${product.price.toFixed(2)}</p>
+                  <Badge variant="secondary" className="mb-2 text-xs">
+                    {product.category}
+                  </Badge>
+                  <h3 className="font-semibold group-hover:text-primary transition-colors">
+                    {product.name}
+                  </h3>
+                  <p className="mt-2 text-lg font-bold">
+                    ${product.price.toFixed(2)}
+                  </p>
                 </CardContent>
               </Card>
             </Link>
           ))}
         </div>
       )}
+
+      <div className="mt-8 flex justify-center gap-2">
+        <Button
+          disabled={currentPage === 1}
+          onClick={() =>
+            setSearchParams({
+              page: currentPage - 1,
+            })
+          }
+        >
+          Previous
+        </Button>
+
+        {Array.from({ length: totalPages }, (_, index) => (
+          <Button
+            key={index}
+            variant={currentPage === index + 1 ? "default" : "outline"}
+            onClick={() =>
+              setSearchParams({
+                page: index + 1,
+              })
+            }
+          >
+            {index + 1}
+          </Button>
+        ))}
+
+        <Button
+          disabled={currentPage === totalPages}
+          onClick={() => setSearchParams({ page: currentPage + 1 })}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 }
