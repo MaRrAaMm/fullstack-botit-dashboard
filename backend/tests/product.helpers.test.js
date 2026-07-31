@@ -1,4 +1,4 @@
-import { calculatePagination,buildFilter,getSortOption } from "../src/modules/product/product.helpers.js";
+import { calculatePagination,buildFilter,getSortOption } from "../src/Modules/product/product.helpers.js";
 describe("calculatePagination", () => {
   test("should calculate skip correctly for first page", () => {
     const result = calculatePagination(1, 6);
