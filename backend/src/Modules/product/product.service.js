@@ -1,5 +1,6 @@
 import { Product } from "../../DB/models/product.model.js";
 import { emitEvent } from "../../socket.js";
+import { calculatePagination, buildFilter,getSortOption } from "./product.helpers.js";
 
 export const createProduct = async (req, res, next) => {
   const product = await Product.create(req.body);
@@ -13,40 +14,22 @@ export const createProduct = async (req, res, next) => {
 };
 
 export const getAllProducts = async (req, res, next) => {
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 6;
-
+  const { page, limit, skip } = calculatePagination(
+    req.query.page,
+    req.query.limit,
+  );
   const search = req.query.search || "";
   const category = req.query.category || "";
   const sort = req.query.sort || "default";
 
-  const skip = (page - 1) * limit;
-
-  const filter = {};
-
-  if (search) {
-    filter.name = {
-      $regex: search,
-      $options: "i",
-    };
-  }
-
-  if (category && category !== "all") {
-    filter.category = category;
-  }
+  const filter = buildFilter(search, category);
 
   let query = Product.find(filter);
 
-  if (sort === "price-asc") {
-    query = query.sort({ price: 1 });
-  }
+  const sortOption = getSortOption(sort);
 
-  if (sort === "price-desc") {
-    query = query.sort({ price: -1 });
-  }
-
-  if (sort === "name") {
-    query = query.sort({ name: 1 });
+  if (sortOption) {
+    query = query.sort(sortOption);
   }
 
   const products = await query.skip(skip).limit(limit);

@@ -31,7 +31,6 @@ describe("Products API", () => {
     expect(res.body.success).toBe(true);
     expect(Array.isArray(res.body.data)).toBe(true);
   });
-
   afterAll(async () => {
     await mongoose.connection.close();
   });
